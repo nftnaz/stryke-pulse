@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ app_name }} · Market Pulse</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .card { background: white; border-radius: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; padding: 1.25rem; }
+    .tab-active { background: #4f46e5; color: white; }
+    .tab-inactive { background: #f1f5f9; color: #475569; }
+  </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-900">
+
+  <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">SP</div>
+        <span class="font-semibold tracking-tight">{{ app_name }}</span>
+      </div>
+      <div class="flex items-center gap-2 text-sm">
+        <button onclick="switchTab('pulse')" id="tab-pulse"
+                class="px-3 py-1.5 rounded-full text-sm font-medium tab-active">Pulse</button>
+        <button onclick="switchTab('options')" id="tab-options"
+                class="px-3 py-1.5 rounded-full text-sm font-medium tab-inactive">Options</button>
+        <span id="market-status" class="ml-3 px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-xs">…</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+
+    <section id="view-pulse" class="space-y-6">
+      <div id="pulse-root">
+        <div class="animate-pulse space-y-6">
+          <div class="h-24 bg-slate-200 rounded-2xl"></div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="h-40 bg-slate-200 rounded-2xl"></div>
+            <div class="h-40 bg-slate-200 rounded-2xl"></div>
+            <div class="h-40 bg-slate-200 rounded-2xl"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-options" class="hidden space-y-6">
+      <div class="flex flex-wrap items-center gap-3">
+        <select id="opt-symbol" class="rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white"
+                onchange="loadOptions()">
+          <option value="NIFTY">NIFTY</option>
+          <option value="BANKNIFTY">BANKNIFTY</option>
+          <option value="FINNIFTY">FINNIFTY</option>
+        </select>
+        <button onclick="loadOptions()"
+                class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
+          Refresh
+        </button>
+        <span id="opt-source" class="text-xs text-slate-400"></span>
+      </div>
+      <div id="options-root">
+        <div class="animate-pulse h-64 bg-slate-200 rounded-2xl"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    let currentTab = 'pulse';
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById('view-pulse').classList.toggle('hidden', tab !== 'pulse');
+      document.getElementById('view-options').classList.toggle('hidden', tab !== 'options');
+      document.getElementById('tab-pulse').className =
+        'px-3 py-1.5 rounded-full text-sm font-medium ' + (tab === 'pulse' ? 'tab-active' : 'tab-inactive');
+      document.getElementById('tab-options').className =
+        'px-3 py-1.5 rounded-full text-sm font-medium ' + (tab === 'options' ? 'tab-active' : 'tab-inactive');
+      if (tab === 'pulse') loadPulse();
+      if (tab === 'options') loadOptions();
+    }
+
+    async function loadPulse() {
+      try {
+        const res = await fetch('/api/pulse');
+        const d = await res.json();
+        renderPulse(d);
+      } catch (e) {
+        document.getElementById('pulse-root').innerHTML =
+          '<div class="card text-red-600">Failed to load pulse</div>';
+      }
+    }
+
+    function renderPulse(d) {
+      document.getElementById('market-status').textContent =
+        d.market_status === 'open' ? 'NSE Open' : 'NSE Closed';
+
+      const moodColor = d.mood.score >= 60 ? 'text-emerald-600' :
+                        d.mood.score >= 40 ? 'text-amber-600' : 'text-rose-600';
+
+      const indicesHtml = d.indices.map(i => `
+        <div class="card">
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="text-sm text-slate-500 font-medium">${i.symbol}</div>
+              <div class="text-2xl font-semibold tracking-tight">${fmt(i.ltp)}</div>
+            </div>
+            <div class="text-right">
+              <div class="${i.change_pct >= 0 ? 'text-emerald-600' : 'text-rose-600'} font-medium">
+                ${i.change_pct >= 0 ? '+' : ''}${i.change_pct?.toFixed(2)}%
+              </div>
+              <div class="text-xs text-slate-400">${i.change >= 0 ? '+' : ''}${fmt(i.change)}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      const sectorsHtml = (d.sectors || []).map(s => `
+        <div class="flex items-center justify-between py-1.5 text-sm">
+          <span class="font-medium">${s.sector}</span>
+          <span class="${s.direction === 'in' ? 'text-emerald-600' : s.direction === 'out' ? 'text-rose-600' : 'text-slate-500'}">
+            ${s.net_flow_cr >= 0 ? '+' : ''}₹${Math.abs(s.net_flow_cr).toLocaleString('en-IN')} cr
+          </span>
+        </div>
+      `).join('');
+
+      document.getElementById('pulse-root').innerHTML = `
+        <div class="card" style="background: linear-gradient(to right, #eef2ff, white); border-color: #e0e7ff;">
+          <p class="text-lg font-medium text-slate-800">${d.summary}</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="card">
+            <div class="text-sm text-slate-500 mb-1">Market Mood</div>
+            <div class="text-4xl font-bold ${moodColor}">${d.mood.score}<span class="text-lg text-slate-400">/100</span></div>
+            <div class="mt-1 font-medium">${d.mood.label}</div>
+            <ul class="mt-3 space-y-1 text-sm text-slate-600">
+              ${(d.mood.notes || []).map(n => `<li>• ${n}</li>`).join('')}
+            </ul>
+          </div>
+          <div class="card">
+            <div class="text-sm text-slate-500 mb-1">India VIX</div>
+            <div class="text-3xl font-semibold">${d.india_vix?.toFixed(2) ?? '—'}</div>
+          </div>
+          <div class="card">
+            <div class="text-sm text-slate-500 mb-2">Sector Money Flow (₹ cr)</div>
+            ${sectorsHtml || '<div class="text-sm text-slate-400">No sector data</div>'}
+          </div>
+        </div>
+        <div>
+          <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Indices</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">${indicesHtml}</div>
+        </div>
+      `;
+    }
+
+    async function loadOptions() {
+      const symbol = document.getElementById('opt-symbol').value;
+      const root = document.getElementById('options-root');
+      root.innerHTML = '<div class="animate-pulse h-64 bg-slate-200 rounded-2xl"></div>';
+
+      try {
+        const [sumRes, chainRes] = await Promise.all([
+          fetch(`/api/options/${symbol}`),
+          fetch(`/api/options/${symbol}/chain`)
+        ]);
+        const summary = await sumRes.json();
+        const chain = await chainRes.json();
+        renderOptions(summary, chain);
+      } catch (e) {
+        root.innerHTML = '<div class="card text-red-600">Failed to load options data</div>';
+      }
+    }
+
+    function renderOptions(s, chain) {
+      document.getElementById('opt-source').textContent =
+        `source: ${s.source} · expiry ${s.expiry} · ${new Date(s.as_of).toLocaleTimeString('en-IN')}`;
+
+      const pcrColor = s.pcr > 1.1 ? 'text-emerald-600' : s.pcr < 0.9 ? 'text-rose-600' : 'text-slate-800';
+
+      const callWalls = (s.top_call_walls || []).map(w =>
+        `<div class="flex justify-between text-sm py-1">
+           <span>${fmt(w.strike)}</span>
+           <span class="font-medium">${fmt(w.oi)}${w.change_oi != null ? ` <span class="text-xs text-slate-400">(${w.change_oi >= 0 ? '+' : ''}${fmt(w.change_oi)})</span>` : ''}</span>
+         </div>`
+      ).join('');
+
+      const putWalls = (s.top_put_walls || []).map(w =>
+        `<div class="flex justify-between text-sm py-1">
+           <span>${fmt(w.strike)}</span>
+           <span class="font-medium">${fmt(w.oi)}${w.change_oi != null ? ` <span class="text-xs text-slate-400">(${w.change_oi >= 0 ? '+' : ''}${fmt(w.change_oi)})</span>` : ''}</span>
+         </div>`
+      ).join('');
+
+      const maxOi = Math.max(
+        ...((chain.strikes || []).map(r => Math.max(r.call_oi || 0, r.put_oi || 0))),
+        1
+      );
+
+      const bars = (chain.strikes || []).map(r => {
+        const callW = ((r.call_oi || 0) / maxOi * 100).toFixed(1);
+        const putW  = ((r.put_oi  || 0) / maxOi * 100).toFixed(1);
+        const isAtm = chain.spot && Math.abs(r.strike - chain.spot) < (s.symbol === 'BANKNIFTY' ? 80 : 40);
+        return `
+          <div class="flex items-center gap-2 text-xs ${isAtm ? 'bg-indigo-50 rounded' : ''}">
+            <div class="w-14 text-right font-medium text-slate-600">${fmt(r.strike)}</div>
+            <div class="flex-1 flex items-center gap-1 h-5">
+              <div class="flex-1 flex justify-end">
+                <div class="h-3.5 rounded-l" style="width:${callW}%; background:#fb7185;"></div>
+              </div>
+              <div class="w-px h-5 bg-slate-200"></div>
+              <div class="flex-1">
+                <div class="h-3.5 rounded-r" style="width:${putW}%; background:#34d399;"></div>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+
+      document.getElementById('options-root').innerHTML = `
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="card">
+            <div class="text-sm text-slate-500">Spot</div>
+            <div class="text-2xl font-semibold">${fmt(s.spot)}</div>
+          </div>
+          <div class="card">
+            <div class="text-sm text-slate-500">PCR</div>
+            <div class="text-2xl font-semibold ${pcrColor}">${s.pcr?.toFixed(2) ?? '—'}</div>
+          </div>
+          <div class="card">
+            <div class="text-sm text-slate-500">Max Pain</div>
+            <div class="text-2xl font-semibold">${fmt(s.max_pain)}</div>
+          </div>
+          <div class="card">
+            <div class="text-sm text-slate-500">Call / Put OI</div>
+            <div class="text-lg font-semibold">
+              ${fmt(s.call_oi_total)} <span class="text-slate-400">/</span> ${fmt(s.put_oi_total)}
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="card">
+            <div class="text-sm font-semibold text-slate-500 mb-2">Insights</div>
+            <ul class="space-y-2 text-sm text-slate-700">
+              ${(s.insights || []).map(i => `<li>• ${i}</li>`).join('')}
+            </ul>
+          </div>
+          <div class="card">
+            <div class="text-sm font-semibold text-slate-500 mb-2">Top Call Walls</div>
+            ${callWalls || '<div class="text-slate-400 text-sm">—</div>'}
+          </div>
+          <div class="card">
+            <div class="text-sm font-semibold text-slate-500 mb-2">Top Put Walls</div>
+            ${putWalls || '<div class="text-slate-400 text-sm">—</div>'}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex justify-between items-center mb-4">
+            <div class="text-sm font-semibold text-slate-500">Strike-wise Open Interest</div>
+            <div class="flex gap-4 text-xs text-slate-500">
+              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded" style="background:#fb7185;"></span> Call OI</span>
+              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded" style="background:#34d399;"></span> Put OI</span>
+            </div>
+          </div>
+          <div class="space-y-1 max-h-96 overflow-y-auto pr-2">
+            ${bars || '<div class="text-slate-400 text-sm">No strike data</div>'}
+          </div>
+        </div>
+      `;
+    }
+
+    function fmt(n) {
+      if (n == null || n === undefined) return '—';
+      return Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    }
+
+    loadPulse();
+    setInterval(() => { if (currentTab === 'pulse') loadPulse(); }, 60000);
+  </script>
+</body>
+</html>

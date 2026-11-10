@@ -1,0 +1,34 @@
+# Core
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+python-dotenv>=1.0.1
+pydantic>=2.9.0
+pydantic-settings>=2.6.0
+httpx>=0.27.2
+jinja2>=3.1.4
+python-multipart>=0.0.12
+
+# Data & caching
+redis>=5.2.0
+orjson>=3.10.0
+pandas>=2.2.0
+numpy>=2.1.0
+
+# Upstox & market data
+# (we'll use httpx directly; official SDK if preferred later)
+
+# RAG / LLM (optional for Phase 1)
+langchain>=0.3.0
+langchain-community>=0.3.0
+langchain-groq>=0.2.0
+chromadb>=0.5.0
+llama-index>=0.11.0
+
+# MCP
+mcp>=1.0.0
+
+# Utils
+tenacity>=9.0.0
+loguru>=0.7.2
+apscheduler>=3.10.4
+pytz>=2024.2
