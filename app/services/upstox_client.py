@@ -18,7 +18,9 @@ from app.core.config import get_settings
 class UpstoxClient:
     def __init__(self, access_token: Optional[str] = None):
         settings = get_settings()
-        self.base_url = settings.upstox_base_url.rstrip("/")
+        self.v2_base_url = (settings.upstox_v2_base_url.rstrip("/"))
+        self.v3_base_url = (settings.upstox_v3_base_url.rstrip("/"))
+        
         self.token = access_token or settings.upstox_access_token
         if not self.token:
             logger.warning("UPSTOX_ACCESS_TOKEN is empty – live calls will fail")
@@ -28,8 +30,15 @@ class UpstoxClient:
             "Authorization": f"Bearer {self.token}",
         }
 
-    def _url(self, path: str) -> str:
-        return f"{self.base_url}{path}"
+    def _url(self,path: str,) -> str:
+        return f"{self.v2_base_url}{path}"
+
+    def _v2_url(self,path: str,):
+        return f"{self.v2_base_url}{path}"
+
+    def _v3_url(self,path: str,):
+        return f"{self.v3_base_url}{path}"
+
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=0.5, min=1, max=8))
     async def _get(self, path: str, params: Optional[dict] = None):
@@ -43,6 +52,25 @@ class UpstoxClient:
             print("URL:", resp.url)
             print("STATUS:", resp.status_code)
             print("BODY:", resp.text)
+
+            resp.raise_for_status()
+
+            return resp.json()
+
+    async def _get_v3(
+        self,
+        path: str,
+        params: dict | None = None,
+    ):
+        async with httpx.AsyncClient(
+            timeout=30.0
+        ) as client:
+
+            resp = await client.get(
+                self._v3_url(path),
+                headers=self._headers,
+                params=params,
+            )
 
             resp.raise_for_status()
 
@@ -137,22 +165,18 @@ class UpstoxClient:
 
         return result
 
-    async def get_change_oi(
+    async def get_historical_candles(
         self,
         instrument_key: str,
-        expiry: str,
-        trade_date: str,
-        interval: int = 1,
+        unit: str,
+        interval: int,
+        to_date: str,
+        from_date: str,
     ):
-        return await self._get(
-            "/market/change-oi",
-            {
-                "instrument_key": instrument_key,
-                "expiry": expiry,
-                "date": trade_date,
-                "interval": interval,
-            },
+        return await self._get_v3(
+            f"/historical-candle/{instrument_key}/{unit}/{interval}/{to_date}/{from_date}"
         )
+
 
     async def get_fii_data(self, interval: str = "daily") -> dict:
         """interval: daily | monthly"""
