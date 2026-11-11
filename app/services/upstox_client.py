@@ -227,12 +227,50 @@ class UpstoxClient:
 
 # Convenience mapping for common indices
 INDEX_KEYS = {
+    # Broad
     "NIFTY": "NSE_INDEX|Nifty 50",
     "BANKNIFTY": "NSE_INDEX|Nifty Bank",
     "FINNIFTY": "NSE_INDEX|Nifty Fin Service",
     "MIDCPNIFTY": "NSE_INDEX|NIFTY MID SELECT",
     "SENSEX": "BSE_INDEX|SENSEX",
+    "INDIA_VIX": "NSE_INDEX|India VIX",
+
+    # Sectoral (for rotation + heatmaps)
+    "NIFTY_BANK": "NSE_INDEX|Nifty Bank",
+    "NIFTY_IT": "NSE_INDEX|Nifty IT",
+    "NIFTY_PHARMA": "NSE_INDEX|Nifty Pharma",
+    "NIFTY_AUTO": "NSE_INDEX|Nifty Auto",
+    "NIFTY_FMCG": "NSE_INDEX|Nifty FMCG",
+    "NIFTY_METAL": "NSE_INDEX|Nifty Metal",
+    "NIFTY_REALTY": "NSE_INDEX|Nifty Realty",
+    "NIFTY_ENERGY": "NSE_INDEX|Nifty Energy",
+    "NIFTY_PSU_BANK": "NSE_INDEX|Nifty PSU Bank",
+    "NIFTY_PVT_BANK": "NSE_INDEX|Nifty Pvt Bank",
+    "NIFTY_MEDIA": "NSE_INDEX|Nifty Media",
+    "NIFTY_HEALTHCARE": "NSE_INDEX|NIFTY HEALTHCARE",
+    "NIFTY_OIL_GAS": "NSE_INDEX|NIFTY OIL AND GAS",
+    "NIFTY_CONSUMER_DURABLES": "NSE_INDEX|NIFTY CONSR DURBL",
 }
+
+# Human-readable sector labels used in UI / heatmaps
+SECTOR_LABELS = {
+    "NIFTY_BANK": "Bank",
+    "NIFTY_IT": "IT",
+    "NIFTY_PHARMA": "Pharma",
+    "NIFTY_AUTO": "Auto",
+    "NIFTY_FMCG": "FMCG",
+    "NIFTY_METAL": "Metal",
+    "NIFTY_REALTY": "Realty",
+    "NIFTY_ENERGY": "Energy",
+    "NIFTY_PSU_BANK": "PSU Bank",
+    "NIFTY_PVT_BANK": "Pvt Bank",
+    "NIFTY_MEDIA": "Media",
+    "NIFTY_HEALTHCARE": "Healthcare",
+    "NIFTY_OIL_GAS": "Oil & Gas",
+    "NIFTY_CONSUMER_DURABLES": "Consumer Durables",
+}
+
+SECTOR_SYMBOLS = list(SECTOR_LABELS.keys())
 
 
 def resolve_instrument_key(symbol: str) -> str:

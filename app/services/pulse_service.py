@@ -21,7 +21,7 @@ from app.models.schemas import (
 from app.services.upstox_client import UpstoxClient, resolve_instrument_key
 
 IST = ZoneInfo("Asia/Kolkata")
-
+from app.services.sector_service import SectorService
 
 def _now_ist() -> datetime:
     return datetime.now(IST)
@@ -40,6 +40,7 @@ class PulseService:
     def __init__(self, client: Optional[UpstoxClient] = None):
         self.client = client or UpstoxClient()
         self.settings = get_settings()
+        self.sector_svc = SectorService()
 
     async def get_pulse(self) -> PulseResponse:
         now = _now_ist()
@@ -118,7 +119,7 @@ class PulseService:
             mood=mood,
             indices=indices,
             india_vix=15,
-            sectors=[],
+            sectors=self.sector_svc.latest_sector_flows(lookback_days=5),
             summary=f"NIFTY {indices[0].ltp if indices else 0}",
         )
 
@@ -188,6 +189,6 @@ class PulseService:
             mood=mood,
             indices=indices,
             india_vix=14.8,
-            sectors=sectors,
+            sectors=self.sector_svc.latest_sector_flows(lookback_days=5),
             summary=summary,
         )
