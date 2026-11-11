@@ -56,6 +56,29 @@ class DatabaseManager:
             """
         )
 
+        # existing market_candles CREATE stays
+
+        # Soft upgrade: add sector column if missing
+        cursor.execute("PRAGMA table_info(market_candles)")
+        cols = {row[1] for row in cursor.fetchall()}
+        if "sector" not in cols:
+            cursor.execute(
+                "ALTER TABLE market_candles ADD COLUMN sector TEXT"
+            )
+
+        # Optional index for heatmap queries
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_candles_symbol_ts
+            ON market_candles (symbol, timestamp)
+            """
+        )
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_candles_sector_ts
+            ON market_candles (sector, timestamp)
+            """
+        )
         #
         # Market snapshots
         #

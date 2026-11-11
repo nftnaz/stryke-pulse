@@ -8,6 +8,7 @@ import AppLayout from "./layouts/AppLayout";
 
 import PulsePage from "./pages/PulsePage";
 import OptionsPage from "./pages/OptionsPage";
+import HeatmapsPage from "./pages/HeatmapsPage";
 
 function Placeholder({
   title,
@@ -58,9 +59,7 @@ export default function App() {
 
           <Route
             path="/heatmaps"
-            element={
-              <Placeholder title="Heatmaps" />
-            }
+            element={<HeatmapsPage />}
           />
 
           <Route
