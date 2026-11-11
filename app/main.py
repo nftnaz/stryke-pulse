@@ -5,9 +5,21 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from loguru import logger
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.routers import options, pulse
+
+from app.routers.history import (
+    router as history_router,
+)
+
+from app.routers.analytics import (
+    router as analytics_router,
+)
+
+
+
 
 settings = get_settings()
 
@@ -18,6 +30,17 @@ app = FastAPI(
     debug=settings.debug,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Static & templates
 BASE_DIR = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
@@ -26,6 +49,9 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 # Routers
 app.include_router(pulse.router)
 app.include_router(options.router)
+app.include_router(history_router)
+app.include_router(analytics_router)
+
 
 
 @app.get("/", response_class=HTMLResponse)

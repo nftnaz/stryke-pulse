@@ -23,7 +23,8 @@ class Settings(BaseSettings):
     upstox_access_token: str = ""
     upstox_api_key: str = ""
     upstox_api_secret: str = ""
-    upstox_base_url: str = "https://api.upstox.com/v2"
+    upstox_v2_base_url: str = "https://api.upstox.com/v2"
+    upstox_v3_base_url: str = "https://api.upstox.com/v3"
 
     # LLM
     llm_provider: Literal["groq", "ollama"] = "groq"
